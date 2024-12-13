@@ -4,15 +4,12 @@ import duckdb
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# File paths
-CUSTOMERS_FILE = r"C:\Users\enkhb\Downloads\DB_MySQL(2-2sem)\insu tables\cust.csv"
-CNTT_FILE = r"C:\Users\enkhb\Downloads\DB_MySQL(2-2sem)\insu tables\cntt.csv"
-CLAIM_FILE = r"C:\Users\enkhb\Downloads\DB_MySQL(2-2sem)\insu tables\claim.csv"
+CUSTOMERS_FILE = "cust.csv"
+CNTT_FILE = "cntt.csv"
+CLAIM_FILE = "claim.csv"
 
-# Set page configuration
 st.set_page_config(page_title="Insurance Database Viewer", layout="wide")
 
-# Load data
 @st.cache_data
 def load_csv_data(file_path):
     return pd.read_csv(file_path)
@@ -21,17 +18,14 @@ customers_df = load_csv_data(CUSTOMERS_FILE)
 cntt_df = load_csv_data(CNTT_FILE)
 claim_df = load_csv_data(CLAIM_FILE)
 
-# Initialize DuckDB connection
 conn = duckdb.connect(database=':memory:')
 conn.register("customers", customers_df)
 conn.register("cntt", cntt_df)
 conn.register("claim", claim_df)
 
-# Sidebar Navigation
 st.sidebar.title("Insurance Fraud Analysis")
 menu = st.sidebar.radio("Navigate", ["Insurance Database","Overview", "Queries and Visualizations", "Summaries and Action Plans"])
 
-# Full Database Section
 if menu == "Insurance Database":
     st.title("Insurance Database 💼")
     selected_table = st.selectbox("Select a table to view:", ["customers", "cntt", "claim"])
@@ -46,7 +40,6 @@ if menu == "Insurance Database":
 elif menu == "Overview":
     st.title("Overview of Insurance Database")
 
-    # Key Objectives
     st.markdown("""
     ### Key Objectives
     - **성별 그룹별 사기율을 파악하기**
@@ -54,12 +47,10 @@ elif menu == "Overview":
     - **총 고객, 정책 및 청구에 대한 통찰력을 얻기기**
     """)
 
-    # Calculate Metrics
     total_customers = customers_df['CUST_ID'].nunique()
     total_policies = cntt_df['POLY_NO'].nunique()
     total_claims = claim_df['POLY_NO'].count()
 
-    # Gender Fraud Rate
     gender_fraud_rate = conn.execute("""
         SELECT SEX, 
                SUM(CASE WHEN SIU_CUST_YN = 'Y' THEN 1 ELSE 0 END) AS FRAUD_COUNT,
@@ -69,7 +60,6 @@ elif menu == "Overview":
         GROUP BY SEX
     """).df()
 
-    # Age Group Fraud Rate
     age_fraud_rate = conn.execute("""
         SELECT CASE 
                    WHEN AGE < 25 THEN 'Under 25'
@@ -84,29 +74,21 @@ elif menu == "Overview":
         GROUP BY AGE_GROUP
     """).df()
 
-    # Display Key Metrics
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Customers", total_customers)
     col2.metric("Total Policies", total_policies)
     col3.metric("Total Claims", total_claims)
 
-    # Display Gender Fraud Rate
     st.subheader("Fraud Rate by Gender")
     st.dataframe(gender_fraud_rate)
 
-    # Display Age Fraud Rate
     st.subheader("Fraud Rate by Age Group")
     st.dataframe(age_fraud_rate)
 
-
-# Queries & Visualizations Section
 elif menu == "Queries and Visualizations":
     st.title("Queries & Visualizations 🔍")
 
-    # Tabbed Interface
     tab1, tab2 = st.tabs(["Analysis Queries", "Custom Query"])
-
-    # Tab 1: Predefined Queries
     with tab1:
         st.header("Analysis Queries")
         query = st.selectbox(
@@ -114,7 +96,6 @@ elif menu == "Queries and Visualizations":
             ["Fraud by Gender", "Fraud by Age Group","Fraud by insurance products"]
         )
 
-        # Query and Visualization: Fraud by Gender
         if query == "Fraud by Gender":
             result = conn.execute("""
                 SELECT SEX, 
@@ -126,7 +107,6 @@ elif menu == "Queries and Visualizations":
             """).df()
             st.dataframe(result)
 
-            # Visualization
             st.subheader("Query Graph:")
             fig, ax = plt.subplots()
             sns.barplot(data=result, x="SEX", y="FRAUD_RATE", palette="coolwarm", ax=ax)
@@ -134,7 +114,6 @@ elif menu == "Queries and Visualizations":
             ax.set_ylabel("Fraud Rate (%)")
             st.pyplot(fig)
 
-        # Query and Visualization: Fraud by Age Group
         elif query == "Fraud by Age Group":
             result = conn.execute("""
                 SELECT CASE 
@@ -151,7 +130,6 @@ elif menu == "Queries and Visualizations":
             """).df()
             st.dataframe(result)
 
-            # Visualization
             st.subheader("Query Graph:")
             fig, ax = plt.subplots()
             sns.barplot(data=result, x="AGE_GROUP", y="FRAUD_RATE", palette="muted", ax=ax)
@@ -174,28 +152,17 @@ elif menu == "Queries and Visualizations":
             st.dataframe(result)
 
             st.subheader("Query Graph:")
-            # Assuming 'result' contains the query result as a DataFrame
             fig, ax = plt.subplots()
-
-            # Create the bar plot
             sns.barplot(data=result, x="GOOD_CLSF_CDNM", y="FRAUD_RATE", palette="muted", ax=ax)
-
-            # Set title and labels
             ax.set_title("Fraud Rate by Insurance Products")
             ax.set_ylabel("Fraud Rate (%)")
-
-            # Define custom labels for the x-axis
             custom_labels = ["1", "2", "3", "4", "5"]
-
-            # Apply custom labels
-            ax.set_xticklabels(custom_labels)  # Rotate if necessary for better readability
-
-            # Render the plot
+            ax.set_xticklabels(custom_labels)  
             st.pyplot(fig)
 
 
 
-    # Tab 2: Custom Query
+    
     with tab2:
         st.header("Run Custom SQL Query")
         st.text("Example Queries:")
@@ -218,13 +185,11 @@ elif menu == "Queries and Visualizations":
             except Exception as e:
                 st.error(f"Error: {e}")
 
-# Summaries & Action Plans Section
 elif menu == "Summaries and Action Plans":
     st.title("Summaries & Action Plans 📋")
 
     tab1, tab2 = st.tabs(["Summary Report", "Recommendations & Action Plan"])
 
-    # Summary Report
     with tab1:
         st.markdown("""
         ### 1. 성별과 사기
@@ -237,10 +202,7 @@ elif menu == "Summaries and Action Plans":
         - **관찰**: 보험 상품별로 사기율이 크게 다르게 나타났다. 특히 고가치 또는 고위험 상품에서 사기 비율이 높은 경향이 있다.
         """)
 
-
-    # Recommendations
     with tab2:
-        ### Recommendations & Action Plan
         st.markdown("""
         ### 추천 사항
         - **고급 분석 기술 활용**: 실시간 사기 탐지를 위해 AI 및 머신러닝 모델 개발
